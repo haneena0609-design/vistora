@@ -14,6 +14,7 @@ public class VistoraApiServer {
         service.initialise();
         int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext("/", VistoraApiServer::home);
         server.createContext("/api/health", VistoraApiServer::health);
         server.createContext("/api/rooms", VistoraApiServer::rooms);
         server.createContext("/api/reservations", VistoraApiServer::reservations);
@@ -22,6 +23,7 @@ public class VistoraApiServer {
         System.out.println("Vistora API running at http://localhost:" + port + "/api/health");
     }
 
+    private static void home(HttpExchange ex) throws IOException { reply(ex, 200, "{\"message\":\"Vistora Java API is online\",\"health\":\"/api/health\",\"rooms\":\"/api/rooms?city=Mumbai&checkIn=2026-08-10&checkOut=2026-08-12\"}"); }
     private static void health(HttpExchange ex) throws IOException { reply(ex, 200, "{\"status\":\"online\",\"service\":\"Vistora Java API\"}"); }
 
     private static void rooms(HttpExchange ex) throws IOException {
@@ -60,6 +62,10 @@ public class VistoraApiServer {
     private static String required(Map<String,String> data,String key){String v=data.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException(key+" is required.");return v;}
     private static Map<String,String> query(String raw){Map<String,String> m=new HashMap<>();if(raw==null)return m;for(String item:raw.split("&")){String[] p=item.split("=",2);if(p.length==2)m.put(java.net.URLDecoder.decode(p[0],StandardCharsets.UTF_8),java.net.URLDecoder.decode(p[1],StandardCharsets.UTF_8));}return m;}
     // Flat JSON is sufficient for frontend form values. A production project should use Jackson/Gson.
+    private static Map<String,String> flatJson(String json){Map<String,String> m=new HashMap<>();java.util.regex.Matcher x=java.util.regex.Pattern.compile("\\\"([^\\\"]+)\\\"\\s*:\\s*(?:\\\"((?:\\\\.|[^\\\"])*)\\\"|([^,}]+))").matcher(json);while(x.find()){String v=x.group(2)!=null?x.group(2).replace("\\\\\"","\"").replace("\\\\n","\n"):x.group(3).trim();m.put(x.group(1),v);}return m;}
+    private static String escape(String text){return text.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","");}
+}
+
     private static Map<String,String> flatJson(String json){Map<String,String> m=new HashMap<>();java.util.regex.Matcher x=java.util.regex.Pattern.compile("\\\"([^\\\"]+)\\\"\\s*:\\s*(?:\\\"((?:\\\\.|[^\\\"])*)\\\"|([^,}]+))").matcher(json);while(x.find()){String v=x.group(2)!=null?x.group(2).replace("\\\\\"","\"").replace("\\\\n","\n"):x.group(3).trim();m.put(x.group(1),v);}return m;}
     private static String escape(String text){return text.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","");}
 }
